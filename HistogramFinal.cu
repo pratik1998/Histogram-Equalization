@@ -6,13 +6,13 @@
 __global__ void calculateHistogramStride(unsigned char *d_greyImage, int *d_histogram, int size)
 {
     int id = threadIdx.x + blockIdx.x * blockDim.x;
-    int stride = blockDim.x * gridDim.x;
-    printf("%d\t",stride);
+    //int stride = blockDim.x * gridDim.x;
+    //printf("%d\t",stride);
     while(id < size)
     {
-        d_histogram[(id%stride)*256+d_greyImage[id]]+=1;
-        id+=stride;
+        d_histogram[(id%blockDim.x)*256+d_greyImage[id]]+=1;
     }
+    __syncthreads();
 }
 
 //Cuda kernel to apply histogram equalization method for image enhacement
@@ -76,7 +76,7 @@ int main(int argc, char** argv)
     gridSize = (int)ceil((float)size/blockSize);
 
     cudaEventRecord(start,0);
-    calculateHistogramStride<<<blocks*2,1024>>>(d_greyImage,d_histogram,size);
+    calculateHistogramStride<<<gridSize,blockSize>>>(d_greyImage,d_histogram,size);
     cudaEventRecord(stop,0);
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&elapsedTime,start,stop);
