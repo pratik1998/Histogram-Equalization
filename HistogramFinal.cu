@@ -49,7 +49,7 @@ int main(int argc, char** argv)
     //Memory Allocation of cuda variables 
     cudaMalloc(&d_greyImage,size);
     cudaMalloc(&d_enhanced,size);
-    cudaMalloc(&d_histogram,sizeof(int)*256);
+    cudaMalloc(&d_histogram,sizeof(int)*256*1024);
     cudaMemset(d_histogram, 0, 1024*256*sizeof(int));
 
     //Cuda Variables to calculate execution time
