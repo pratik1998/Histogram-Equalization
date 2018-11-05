@@ -19,7 +19,7 @@ __global__ void calculateHistogramStride(unsigned char *d_greyImage, int *d_hist
 __global__ void histogram_equalization(unsigned char *d_greyImage, int *d_histogram,unsigned char *d_enhanced, int size)
 {
     int id = blockIdx.x*blockDim.x+threadIdx.x;
-    //printf("id:%d\n",id);
+    printf("id:%d\n",blockDim.x);
     if(id<size)
         d_enhanced[id] = d_histogram[d_greyImage[id]];
     __syncthreads();
