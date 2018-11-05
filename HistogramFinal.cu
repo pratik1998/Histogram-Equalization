@@ -6,6 +6,7 @@
 __global__ void calculateHistogramStride(unsigned char *d_greyImage, int *d_histogram, int size)
 {
     int id = threadIdx.x + blockIdx.x * blockDim.x;
+    printf("%d\t",id);
     int stride = blockDim.x * gridDim.x;
     while(id < size)
     {
