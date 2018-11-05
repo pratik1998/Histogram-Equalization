@@ -79,9 +79,6 @@ int main(int argc, char** argv)
     printf("Image Dimention: %dx%d pixels\n",imageWidth,imageHeight);
 
     //Required variables for executing CUDA kernel
-    cudaDeviceProp prop;
-    cudaGetDeviceProperties(&prop,0);
-    int blocks = prop.multiProcessorCount;
     int blockSize, gridSize;
     blockSize = 1024;
     gridSize = (int)ceil((float)size/blockSize);
@@ -107,20 +104,20 @@ int main(int argc, char** argv)
     for(int j=0;j<256;j++)
         sum+=h_finalHistogram[j];
     printf("Total sum: %d\n",sum);
-    /*
+    
     //Calculating cummulative probabilities and new gray values for enhanced Image
     float cummulative = 0;
     for(int i=0;i<256;i++)
     {
         //printf("Cummulative Probability of gray image for value %d:%d\n",i,histogram[i]);
-        cummulative = cummulative+(h_histogram[i]*1.0/totalObservation);
-        h_histogram[i] = cummulative*255;
+        cummulative = cummulative+(h_finalHistogram[i]*1.0/totalObservation);
+        h_finalHistogram[i] = cummulative*255;
     }
-    cudaMemcpy(d_histogram,h_histogram,sizeof(int) * 256,cudaMemcpyHostToDevice);
+    cudaMemcpy(d_finalHistogram,h_finalHistogram,sizeof(int) * 256,cudaMemcpyHostToDevice);
     //printf("Total Elements:%d",sum);
 
     //cudaEventRecord(start,0);
-    histogram_equalization<<<gridSize,blockSize>>>(d_greyImage,d_histogram,d_enhanced,size);
+    histogram_equalization<<<gridSize,blockSize>>>(d_greyImage,d_finalHistogram,d_enhanced,size);
     cudaEventRecord(stop,0);
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&elapsedTime,start,stop);
@@ -140,7 +137,7 @@ int main(int argc, char** argv)
     fwrite(h_enhanced, imageHeight*imageWidth, 1, fp);
     fclose(fp);
     printf("OK - file %s saved\n", filename);
-    */
+    
     //Deallocating Memories from host and device
     free(h_rgb);
     free(h_greyImage);
