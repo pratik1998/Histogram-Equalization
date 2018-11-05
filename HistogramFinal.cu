@@ -75,7 +75,7 @@ int main(int argc, char** argv)
     gridSize = (int)ceil((float)size/blockSize);
 
     cudaEventRecord(start,0);
-    calculateHistogramStride<<<blocks*2,256>>>(d_greyImage,d_histogram,size);
+    calculateHistogramStride<<<blocks*2,1024>>>(d_greyImage,d_histogram,size);
     cudaEventRecord(stop,0);
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&elapsedTime,start,stop);
