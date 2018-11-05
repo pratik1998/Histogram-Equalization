@@ -9,7 +9,7 @@ __global__ void calculateHistogramStride(unsigned char *d_greyImage, int *d_hist
     int stride = blockDim.x * gridDim.x;
     while(id < size)
     {
-        d_histogram[(id%1024)*256+d_greyImage[id]]+=1;
+        d_histogram[(id%stride)*256+d_greyImage[id]]+=1;
         id+=stride;
     }
 }
