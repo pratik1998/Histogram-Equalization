@@ -6,10 +6,10 @@
 __global__ void calculateHistogramStride(unsigned char *d_greyImage, int *d_histogram, int size)
 {
     int id = blockIdx.x*blockDim.x+threadIdx.x;
-    printf("id:%d\n",blockDim.x);
+    //printf("id:%d\n",id);
     if(id<size)
-        atomicAdd(&(d_histogram[(id%blockDim.x)*1024+d_greyImage[id]]),1);
-    __syncthreads();
+        atomicAdd(&(d_histogram[(id%blockDim.x)*256+d_greyImage[id]]),1);
+    //__syncthreads();
 }
 
 //Cuda kernel to apply histogram equalization method for image enhacement
