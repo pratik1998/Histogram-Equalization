@@ -5,13 +5,10 @@
 
 __global__ void calculateHistogramStride(unsigned char *d_greyImage, int *d_histogram, int size)
 {
-    int id = threadIdx.x + blockIdx.x * blockDim.x;
-    //int stride = blockDim.x * gridDim.x;
+    int id = blockIdx.x*blockDim.x+threadIdx.x;
     printf("id:%d\n",blockDim.x);
-    while(id < size)
-    {
-        d_histogram[(id%blockDim.x)*256+d_greyImage[id]]+=1;
-    }
+    if(id<size)
+        atomicAdd(&(d_histogram[(id%blockDim.x)*1024+d_greyImage[id]]),1);
     __syncthreads();
 }
 
@@ -84,10 +81,10 @@ int main(int argc, char** argv)
     cudaMemcpy(h_histogram,d_histogram,sizeof(int) * 256 * 1024, cudaMemcpyDeviceToHost);
 
     int sum = 0;
-    for(int i=0;i<1024;i++)
+    for(int i=0;i<1024*256;i++)
     {
-        for(int j=0;j<256;j++)
-            sum+=h_histogram[i*256+j];
+        //for(int j=0;j<256;j++)
+        sum+=h_histogram[i*256+j];
     }
     printf("Total sum: %d\n",sum);
     /*
