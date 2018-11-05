@@ -19,9 +19,10 @@ __global__ void calculateFinalHistogram(int *d_histogram,int *d_finalHistogram,i
     {
         int tmp = id%1024;
         int newId = tmp%256;
-        atomicAdd(&(d_finalHistogram[newId]),d_histogram[id]);
+        if(d_histogram[id]!=0)
+            atomicAdd(&(d_finalHistogram[newId]),d_histogram[id]);
     }
-    __syncthreads();
+    //__syncthreads();
 }
 
 //Cuda kernel to apply histogram equalization method for image enhacement
