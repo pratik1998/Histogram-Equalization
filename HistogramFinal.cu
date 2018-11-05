@@ -81,7 +81,7 @@ int main(int argc, char** argv)
     cudaMemcpy(h_histogram,d_histogram,sizeof(int) * 256 * 1024, cudaMemcpyDeviceToHost);
 
     int sum = 0;
-    for(int i=0;i<1024*256;i++)
+    for(int i=0;i<1024;i++)
     {
         for(int j=0;j<256;j++)
             sum+=h_histogram[i*256+j];
