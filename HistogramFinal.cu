@@ -12,6 +12,18 @@ __global__ void calculateHistogramStride(unsigned char *d_greyImage, int *d_hist
     //__syncthreads();
 }
 
+__global__ void calculateFinalHistogram(int *d_histogram,int *d_finalHistogram,int size)
+{
+    int id = blockIdx.x*blockDim.x+threadIdx.x;
+    if(id<size)
+    {
+        int tmp = id%1024;
+        int newId = tmp%256;
+        atomicAdd(&(d_finalHistogram[newId]),d_histogram[id]);
+    }
+    __syncthreads();
+}
+
 //Cuda kernel to apply histogram equalization method for image enhacement
 __global__ void histogram_equalization(unsigned char *d_greyImage, int *d_histogram,unsigned char *d_enhanced, int size)
 {
@@ -44,12 +56,14 @@ int main(int argc, char** argv)
     unsigned char *d_greyImage;
     unsigned char *d_enhanced;
     unsigned int *h_histogram = (unsigned int *) malloc(sizeof(unsigned int)*256*1024);
-    int *d_histogram;
+    unsigned int *h_finalHistogram = (unsigned int *) malloc(sizeof(unsigned int)*256);
+    int *d_histogram,*d_finalHistogram;
 
     //Memory Allocation of cuda variables 
     cudaMalloc(&d_greyImage,size);
     cudaMalloc(&d_enhanced,size);
     cudaMalloc(&d_histogram,sizeof(int)*256*1024);
+    cudaMalloc(&d_finalHistogram,sizeof(int)*256);
     cudaMemset(d_histogram, 0, 1024*256*sizeof(int));
 
     //Cuda Variables to calculate execution time
@@ -78,14 +92,19 @@ int main(int argc, char** argv)
     cudaEventElapsedTime(&elapsedTime,start,stop);
     printf("Time Required for Creating Histogram: %3.5f ms\n",elapsedTime);
 
-    cudaMemcpy(h_histogram,d_histogram,sizeof(int) * 256 * 1024, cudaMemcpyDeviceToHost);
+    gridSize = 256;
+    calculateFinalHistogram<<<gridSize,blockSize>>>(d_histogram,d_finalHistogram,1024*256);
+    cudaEventRecord(stop,0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&elapsedTime,start,stop);
+    printf("Time Required for Creating Histogram: %3.5f ms\n",elapsedTime);
+
+    cudaMemcpy(h_finalHistogram,d_finalHistogram,sizeof(int)*256,cudaMemcpyDeviceToHost);
+    //cudaMemcpy(h_histogram,d_histogram,sizeof(int) * 256 * 1024, cudaMemcpyDeviceToHost);
 
     int sum = 0;
-    for(int i=0;i<1024;i++)
-    {
-        for(int j=0;j<256;j++)
-            sum+=h_histogram[i*256+j];
-    }
+    for(int j=0;j<256;j++)
+        sum+=h_finalHistogram[j];
     printf("Total sum: %d\n",sum);
     /*
     //Calculating cummulative probabilities and new gray values for enhanced Image
