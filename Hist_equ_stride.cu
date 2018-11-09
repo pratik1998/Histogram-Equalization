@@ -24,6 +24,23 @@ __global__ void calculateHistogramStride(unsigned char *d_greyImage, int *d_hist
     }
 }
 
+__global__ void scanHistogram(int *d_histogram,int totalObservation)
+{
+    int id = threadIdx.x + blockIdx.x * blockDim.x;
+    if(id>256)
+        return;
+    for(int stride=1;stride<=256;stride*=2)
+    {
+        int index = id - stride;
+        int val = 0;
+        if(index>=0)
+            val = d_histogram[index];
+        __syncthreads();
+        d_histogram[id]+=val;
+        __syncthreads();
+    }
+}
+
 //Cuda kernel to apply histogram equalization method for image enhacement
 __global__ void histogram_equalization(unsigned char *d_greyImage, int *d_histogram,unsigned char *d_enhanced, int size)
 {
@@ -91,17 +108,18 @@ int main(int argc, char** argv)
     cudaEventElapsedTime(&elapsedTime,start,stop);
     printf("Time Required for Creating Histogram: %3.5f ms\n",elapsedTime);
 
-    cudaMemcpy(h_histogram,d_histogram,sizeof(int) * 256, cudaMemcpyDeviceToHost);
-
+    //cudaMemcpy(h_histogram,d_histogram,sizeof(int) * 256, cudaMemcpyDeviceToHost);
+    scanHistogram<<<1,256>>(d_histogram,totalObservation);
     //Calculating cummulative probabilities and new gray values for enhanced Image
-    float cummulative = 0;
+    /*float cummulative = 0;
     for(int i=0;i<256;i++)
     {
         //printf("Cummulative Probability of gray image for value %d:%d\n",i,histogram[i]);
         cummulative = cummulative+(h_histogram[i]*1.0/totalObservation);
         h_histogram[i] = cummulative*255;
-    }
-    cudaMemcpy(d_histogram,h_histogram,sizeof(int) * 256,cudaMemcpyHostToDevice);
+    }*/
+    cudaMemcpy(h_histogram,d_histogram,sizeof(int) * 256, cudaMemcpyDeviceToHost);
+    //cudaMemcpy(d_histogram,h_histogram,sizeof(int) * 256,cudaMemcpyHostToDevice);
     //printf("Total Elements:%d",sum);
 
     //cudaEventRecord(start,0);
