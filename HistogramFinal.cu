@@ -17,7 +17,7 @@ __global__ void calculateFinalHistogram(int *d_histogram,int *d_finalHistogram,i
     int id = blockIdx.x*blockDim.x+threadIdx.x;
     if(id<size)
     {
-        int tmp = id%1024;
+        int tmp = id%blockDim.x;
         int newId = tmp%256;
         if(d_histogram[id]!=0)
             atomicAdd(&(d_finalHistogram[newId]),d_histogram[id]);
@@ -49,6 +49,9 @@ int main(int argc, char** argv)
     image = readPPM(input_image);
     int size = sizeof(unsigned char)*(image->x)*(image->y);
     int totalObservation = (image->x)*(image->y);
+    int blockSize, gridSize;
+    blockSize = 64;
+    gridSize = (int)ceil((float)size/blockSize);
 
     //Memory Allocation and initialization of host variables
     unsigned char *h_rgb = (unsigned char *) malloc(size*3);
@@ -56,16 +59,16 @@ int main(int argc, char** argv)
     unsigned char *h_enhanced = (unsigned char *) malloc(size);
     unsigned char *d_greyImage;
     unsigned char *d_enhanced;
-    unsigned int *h_histogram = (unsigned int *) malloc(sizeof(unsigned int)*256*1024);
+    unsigned int *h_histogram = (unsigned int *) malloc(sizeof(unsigned int)*256*blockSize);
     unsigned int *h_finalHistogram = (unsigned int *) malloc(sizeof(unsigned int)*256);
     int *d_histogram,*d_finalHistogram;
 
     //Memory Allocation of cuda variables 
     cudaMalloc(&d_greyImage,size);
     cudaMalloc(&d_enhanced,size);
-    cudaMalloc(&d_histogram,sizeof(int)*256*1024);
+    cudaMalloc(&d_histogram,sizeof(int)*256*blockSize);
     cudaMalloc(&d_finalHistogram,sizeof(int)*256);
-    cudaMemset(d_histogram, 0, 1024*256*sizeof(int));
+    cudaMemset(d_histogram, 0, blockSize*256*sizeof(int));
 
     //Cuda Variables to calculate execution time
     cudaEvent_t start,stop;
@@ -79,9 +82,9 @@ int main(int argc, char** argv)
     printf("Image Dimention: %dx%d pixels\n",imageWidth,imageHeight);
 
     //Required variables for executing CUDA kernel
-    int blockSize, gridSize;
-    blockSize = 1024;
-    gridSize = (int)ceil((float)size/blockSize);
+    //int blockSize, gridSize;
+    //blockSize = 256;
+    //gridSize = (int)ceil((float)size/blockSize);
 
     cudaEventRecord(start,0);
     calculateHistogramStride<<<gridSize,blockSize>>>(d_greyImage,d_histogram,size);
@@ -89,18 +92,26 @@ int main(int argc, char** argv)
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&elapsedTime,start,stop);
     printf("Time Required for Creating Histogram: %3.5f ms\n",elapsedTime);
+    cudaMemcpy(h_histogram,d_histogram,sizeof(int) * 256 * blockSize, cudaMemcpyDeviceToHost);
+    int sum=0;
+    for(int i=0;i<blockSize;i++)
+    {
+        for(int j=0;j<256;j++)
+             sum+=h_histogram[i*256+j];
+    }
+    printf("%d\n",sum);
 
     gridSize = 256;
-    calculateFinalHistogram<<<gridSize,blockSize>>>(d_histogram,d_finalHistogram,1024*256);
+    calculateFinalHistogram<<<gridSize,blockSize>>>(d_histogram,d_finalHistogram,blockSize*256);
     cudaEventRecord(stop,0);
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&elapsedTime,start,stop);
     printf("Time Required for Creating Histogram: %3.5f ms\n",elapsedTime);
 
     cudaMemcpy(h_finalHistogram,d_finalHistogram,sizeof(int)*256,cudaMemcpyDeviceToHost);
-    //cudaMemcpy(h_histogram,d_histogram,sizeof(int) * 256 * 1024, cudaMemcpyDeviceToHost);
+    //cudaMemcpy(h_histogram,d_histogram,sizeof(int) * 256 * blockSize, cudaMemcpyDeviceToHost);
 
-    int sum = 0;
+    sum = 0;
     for(int j=0;j<256;j++)
         sum+=h_finalHistogram[j];
     printf("Total sum: %d\n",sum);
